@@ -277,59 +277,60 @@
         };
 
         // 模拟网络通信 (在实际应用中应替换为真实的WebSocket或HTTP请求)
-        const network = {
-            players: {},
-            rooms: {},
-            
-            createRoom: function(playerName, callback) {
-                const roomId = Math.floor(1000 + Math.random() * 9000).toString();
-                const playerId = Math.random().toString(36).substr(2, 9);
-                
-                this.rooms[roomId] = {
-                    players: [playerId],
-                    host: playerId,
-                    gameState: 'lobby',
-                    words: null
-                };
-                
-                this.players[playerId] = {
-                    name: playerName,
-                    roomId: roomId,
-                    isHost: true
-                };
-                
-                callback({
-                    success: true,
-                    roomId: roomId,
-                    playerId: playerId,
-                    isHost: true
-                });
-            },
-            
-            joinRoom: function(playerName, roomId, callback) {
-                if (!this.rooms[roomId]) {
-                    callback({ success: false, message: "房间不存在" });
-                    return;
-                }
-                
-                const playerId = Math.random().toString(36).substr(2, 9);
-                this.rooms[roomId].players.push(playerId);
-                
-                this.players[playerId] = {
-                    name: playerName,
-                    roomId: roomId,
-                    isHost: false
-                };
-                
-                callback({
-                    success: true,
-                    roomId: roomId,
-                    playerId: playerId,
-                    isHost: false,
-                    players: this.getRoomPlayers(roomId)
-                });
-            },
-            
+       const network = {
+    rooms: {}, // 存储所有房间
+    players: {}, // 存储所有玩家
+    
+    // 创建房间（修改后）
+    createRoom: function(playerName, callback) {
+        const roomId = Math.floor(1000 + Math.random() * 9000).toString();
+        const playerId = Math.random().toString(36).substr(2, 9);
+        
+        this.rooms[roomId] = {
+            players: [playerId],
+            host: playerId,
+            gameState: 'lobby',
+            words: null
+        };
+        
+        this.players[playerId] = {
+            name: playerName,
+            roomId: roomId,
+            isHost: true,
+            isAlive: true
+        };
+        
+        callback({
+            success: true,
+            roomId: roomId,
+            playerId: playerId
+        });
+    },
+    
+    // 加入房间（修改后）
+    joinRoom: function(playerName, roomId, callback) {
+        if (!this.rooms[roomId]) {
+            callback({ success: false, message: "房间不存在" });
+            return;
+        }
+        
+        const playerId = Math.random().toString(36).substr(2, 9);
+        this.rooms[roomId].players.push(playerId);
+        
+        this.players[playerId] = {
+            name: playerName,
+            roomId: roomId,
+            isHost: false,
+            isAlive: true
+        };
+        
+        callback({
+            success: true,
+            roomId: roomId,
+            playerId: playerId,
+            players: this.getRoomPlayers(roomId)
+        });
+    },
             getRoomPlayers: function(roomId) {
                 if (!this.rooms[roomId]) return [];
                 
@@ -769,6 +770,7 @@
             elements.joinRoomSection.style.display = 'block';
         });
 
+        // 修改原 confirmJoinBtn 点击事件
         elements.confirmJoinBtn.addEventListener('click', () => {
             const playerName = elements.playerName.value.trim();
             const roomId = elements.roomIdInput.value.trim();
@@ -778,13 +780,10 @@
                 return;
             }
             
-            if (!roomId) {
-                alert('请输入房间号');
-                return;
-            }
-            
             network.joinRoom(playerName, roomId, (response) => {
                 if (response.success) {
+                    // 加入成功后更新URL
+                    window.history.pushState({}, '', `?room=${roomId}`);
                     gameState.playerName = playerName;
                     gameState.playerId = response.playerId;
                     gameState.roomId = response.roomId;
@@ -810,7 +809,7 @@
                         });
                     }, 2000);
                 } else {
-                    alert('加入房间失败: ' + response.message);
+                    alert(response.message); 
                 }
             });
         });
@@ -1220,6 +1219,32 @@
 
         // 初始化
         updatePlayerList([]);
+        // 添加URL房间号解析功能
+        window.addEventListener('load', () => {
+            // 从URL参数获取房间号（如 ?room=1234）
+            const urlParams = new URLSearchParams(window.location.search);
+            const roomId = urlParams.get('room');
+            
+            if (roomId) {
+                // 自动填充房间号输入框并显示加入界面
+                document.getElementById('roomIdInput').value = roomId;
+                document.getElementById('joinRoomSection').style.display = 'block';
+                
+                // 如果已有玩家名称，自动聚焦确认按钮
+                if (document.getElementById('playerName').value.trim()) {
+                    document.getElementById('confirmJoinBtn').focus();
+                }
+            }
+            
+            // 调试用：控制台打印当前URL参数
+            console.log('URL参数:', Object.fromEntries(urlParams.entries()));
+        });
+        
+        // 确保网络模块已初始化（兼容性处理）
+        if (typeof network === 'undefined') {
+            console.warn('网络模块未正确初始化，正在重新加载...');
+            setTimeout(() => location.reload(), 1000);
+        }
     </script>
 </body>
 </html>
