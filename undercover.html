@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>谁是卧底</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .game-area {
+            display: none;
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .lobby {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .player-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .player {
+            background-color: #e3f2fd;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        .btn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #0d8aee;
+        }
+        .btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .input-field {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            width: 200px;
+            margin-right: 10px;
+        }
+        .role-info {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #e8f5e9;
+            border-radius: 4px;
+            display: none;
+        }
+        .timer {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin: 15px 0;
+            color: #2196F3;
+        }
+        .vote-area {
+            margin-top: 20px;
+            display: none;
+        }
+        .vote-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .vote-btn {
+            background-color: #ff9800;
+            color: white;
+        }
+        .vote-btn:hover {
+            background-color: #f57c00;
+        }
+        .game-log {
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            border: 1px solid #eee;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        .speech-area {
+            margin-top: 20px;
+            display: none;
+        }
+        .speech-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        .results {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #fff8e1;
+            border-radius: 4px;
+        }
+        .waiting {
+            text-align: center;
+            margin: 20px 0;
+            font-style: italic;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>谁是卧底</h1>
+        </div>
+        
+        <div class="lobby" id="lobby">
+            <h2>游戏大厅</h2>
+            <div>
+                <input type="text" class="input-field" id="playerName" placeholder="你的名字">
+                <button class="btn" id="createRoomBtn">创建房间</button>
+                <button class="btn" id="joinRoomBtn">加入房间</button>
+            </div>
+            <div id="roomInfo" style="display: none; margin-top: 15px;">
+                <h3>房间号: <span id="roomIdDisplay"></span></h3>
+                <div class="player-list" id="playerList"></div>
+                <button class="btn" id="startGameBtn" disabled>开始游戏</button>
+            </div>
+            <div id="joinRoomSection" style="display: none; margin-top: 15px;">
+                <input type="text" class="input-field" id="roomIdInput" placeholder="输入房间号">
+                <button class="btn" id="confirmJoinBtn">确认加入</button>
+            </div>
+        </div>
+        
+        <div class="game-area" id="gameArea">
+            <h2 id="gamePhase">游戏阶段</h2>
+            <div class="timer" id="timer">00:00</div>
+            
+            <div class="role-info" id="roleInfo">
+                <h3>你的身份</h3>
+                <p id="roleText"></p>
+                <p id="wordText"></p>
+                <p id="hintText"></p>
+            </div>
+            
+            <div class="speech-area" id="speechArea">
+                <h3>发言环节</h3>
+                <p>当前发言玩家: <span id="currentSpeaker"></span></p>
+                <textarea class="speech-input" id="speechInput" placeholder="请输入你的发言"></textarea>
+                <button class="btn" id="submitSpeechBtn">提交发言</button>
+            </div>
+            
+            <div class="vote-area" id="voteArea">
+                <h3>投票环节</h3>
+                <p>请投票选出你认为的卧底:</p>
+                <div class="vote-options" id="voteOptions"></div>
+                <button class="btn" id="abstainVoteBtn">弃权</button>
+            </div>
+            
+            <div class="game-log" id="gameLog"></div>
+            
+            <div class="results" id="results">
+                <h3>游戏结果</h3>
+                <div id="resultContent"></div>
+                <button class="btn" id="newGameBtn">开始新游戏</button>
+            </div>
+            
+            <div class="waiting" id="waitingArea">
+                请等待其他玩家操作...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 游戏状态
+        const gameState = {
+            players: [],
+            currentPlayer: null,
+            roomId: null,
+            playerName: null,
+            playerId: null,
+            role: null,
+            word: null,
+            hint: null,
+            gamePhase: 'lobby', // lobby, roleAssignment, speaking, voting, results
+            currentSpeakerIndex: 0,
+            voteCounts: {},
+            eliminatedPlayers: [],
+            speechTime: 60, // 发言时间60秒
+            voteTime: 30, // 投票时间30秒
+            timerInterval: null,
+            timeLeft: 0,
+            isHost: false,
+            wordsPool: [
+                { word: "苹果", hint: "水果" },
+                { word: "香蕉", hint: "水果" },
+                { word: "电视", hint: "家电" },
+                { word: "冰箱", hint: "家电" },
+                { word: "足球", hint: "运动" },
+                { word: "篮球", hint: "运动" },
+                { word: "咖啡", hint: "饮品" },
+                { word: "茶", hint: "饮品" },
+                { word: "猫", hint: "动物" },
+                { word: "狗", hint: "动物" }
+            ],
+            tiePlayers: []
+        };
+
+        // DOM元素
+        const elements = {
+            lobby: document.getElementById('lobby'),
+            gameArea: document.getElementById('gameArea'),
+            playerName: document.getElementById('playerName'),
+            createRoomBtn: document.getElementById('createRoomBtn'),
+            joinRoomBtn: document.getElementById('joinRoomBtn'),
+            roomInfo: document.getElementById('roomInfo'),
+            roomIdDisplay: document.getElementById('roomIdDisplay'),
+            playerList: document.getElementById('playerList'),
+            startGameBtn: document.getElementById('startGameBtn'),
+            joinRoomSection: document.getElementById('joinRoomSection'),
+            roomIdInput: document.getElementById('roomIdInput'),
+            confirmJoinBtn: document.getElementById('confirmJoinBtn'),
+            gamePhase: document.getElementById('gamePhase'),
+            timer: document.getElementById('timer'),
+            roleInfo: document.getElementById('roleInfo'),
+            roleText: document.getElementById('roleText'),
+            wordText: document.getElementById('wordText'),
+            hintText: document.getElementById('hintText'),
+            speechArea: document.getElementById('speechArea'),
+            currentSpeaker: document.getElementById('currentSpeaker'),
+            speechInput: document.getElementById('speechInput'),
+            submitSpeechBtn: document.getElementById('submitSpeechBtn'),
+            voteArea: document.getElementById('voteArea'),
+            voteOptions: document.getElementById('voteOptions'),
+            abstainVoteBtn: document.getElementById('abstainVoteBtn'),
+            gameLog: document.getElementById('gameLog'),
+            results: document.getElementById('results'),
+            resultContent: document.getElementById('resultContent'),
+            newGameBtn: document.getElementById('newGameBtn'),
+            waitingArea: document.getElementById('waitingArea')
+        };
+
+        // 模拟网络通信 (在实际应用中应替换为真实的WebSocket或HTTP请求)
+        const network = {
+            players: {},
+            rooms: {},
+            
+            createRoom: function(playerName, callback) {
+                const roomId = Math.floor(1000 + Math.random() * 9000).toString();
+                const playerId = Math.random().toString(36).substr(2, 9);
+                
+                this.rooms[roomId] = {
+                    players: [playerId],
+                    host: playerId,
+                    gameState: 'lobby',
+                    words: null
+                };
+                
+                this.players[playerId] = {
+                    name: playerName,
+                    roomId: roomId,
+                    isHost: true
+                };
+                
+                callback({
+                    success: true,
+                    roomId: roomId,
+                    playerId: playerId,
+                    isHost: true
+                });
+            },
+            
+            joinRoom: function(playerName, roomId, callback) {
+                if (!this.rooms[roomId]) {
+                    callback({ success: false, message: "房间不存在" });
+                    return;
+                }
+                
+                const playerId = Math.random().toString(36).substr(2, 9);
+                this.rooms[roomId].players.push(playerId);
+                
+                this.players[playerId] = {
+                    name: playerName,
+                    roomId: roomId,
+                    isHost: false
+                };
+                
+                callback({
+                    success: true,
+                    roomId: roomId,
+                    playerId: playerId,
+                    isHost: false,
+                    players: this.getRoomPlayers(roomId)
+                });
+            },
+            
+            getRoomPlayers: function(roomId) {
+                if (!this.rooms[roomId]) return [];
+                
+                return this.rooms[roomId].players.map(playerId => {
+                    return {
+                        id: playerId,
+                        name: this.players[playerId].name,
+                        isHost: this.players[playerId].isHost
+                    };
+                });
+            },
+            
+            startGame: function(roomId, callback) {
+                if (!this.rooms[roomId]) {
+                    callback({ success: false, message: "房间不存在" });
+                    return;
+                }
+                
+                // 分配角色和词汇
+                const players = this.getRoomPlayers(roomId);
+                const roles = assignRoles(players.length);
+                const wordPair = getRandomWordPair();
+                
+                this.rooms[roomId].gameState = 'roleAssignment';
+                this.rooms[roomId].words = wordPair;
+                this.rooms[roomId].roles = roles;
+                this.rooms[roomId].eliminatedPlayers = [];
+                this.rooms[roomId].currentSpeakerIndex = 0;
+                
+                // 为每个玩家分配角色和词汇
+                players.forEach((player, index) => {
+                    this.players[player.id].role = roles[index].role;
+                    this.players[player.id].word = roles[index].role === '白板' ? null : 
+                                                  (roles[index].isUndercover ? wordPair.undercoverWord : wordPair.commonWord);
+                    this.players[player.id].hint = wordPair.hint;
+                    this.players[player.id].isAlive = true;
+                });
+                
+                callback({ success: true, players: players });
+            },
+            
+            getPlayerInfo: function(playerId) {
+                return this.players[playerId] || null;
+            },
+            
+            submitSpeech: function(playerId, speech, callback) {
+                const player = this.players[playerId];
+                if (!player) {
+                    callback({ success: false, message: "玩家不存在" });
+                    return;
+                }
+                
+                const roomId = player.roomId;
+                const room = this.rooms[roomId];
+                
+                // 记录发言
+                if (!room.speeches) room.speeches = [];
+                room.speeches.push({
+                    playerId: playerId,
+                    playerName: player.name,
+                    content: speech
+                });
+                
+                // 移动到下一个发言者
+                room.currentSpeakerIndex = (room.currentSpeakerIndex + 1) % room.players.length;
+                while (!this.players[room.players[room.currentSpeakerIndex]].isAlive) {
+                    room.currentSpeakerIndex = (room.currentSpeakerIndex + 1) % room.players.length;
+                }
+                
+                // 检查是否所有玩家都已发言
+                const alivePlayers = room.players.filter(pId => this.players[pId].isAlive);
+                const spokenPlayers = room.speeches ? room.speeches.filter(s => alivePlayers.includes(s.playerId)).length : 0;
+                
+                if (spokenPlayers >= alivePlayers.length) {
+                    room.gameState = 'voting';
+                    room.votes = {};
+                }
+                
+                callback({ 
+                    success: true, 
+                    currentSpeaker: room.players[room.currentSpeakerIndex],
+                    gameState: room.gameState,
+                    speeches: room.speeches || []
+                });
+            },
+            
+            submitVote: function(playerId, voteFor, callback) {
+                const player = this.players[playerId];
+                if (!player) {
+                    callback({ success: false, message: "玩家不存在" });
+                    return;
+                }
+                
+                const roomId = player.roomId;
+                const room = this.rooms[roomId];
+                
+                // 记录投票
+                if (!room.votes) room.votes = {};
+                room.votes[playerId] = voteFor;
+                
+                // 检查是否所有玩家都已投票
+                const alivePlayers = room.players.filter(pId => this.players[pId].isAlive);
+                const votedPlayers = Object.keys(room.votes).length;
+                
+                if (votedPlayers >= alivePlayers.length) {
+                    // 计算投票结果
+                    const voteCounts = {};
+                    alivePlayers.forEach(pId => {
+                        voteCounts[pId] = 0;
+                    });
+                    
+                    Object.values(room.votes).forEach(votedPlayerId => {
+                        if (votedPlayerId && voteCounts[votedPlayerId] !== undefined) {
+                            voteCounts[votedPlayerId]++;
+                        }
+                    });
+                    
+                    // 找出最高票数
+                    const maxVotes = Math.max(...Object.values(voteCounts));
+                    const playersWithMaxVotes = Object.keys(voteCounts).filter(pId => voteCounts[pId] === maxVotes);
+                    
+                    if (playersWithMaxVotes.length > 1) {
+                        // 平票情况
+                        room.gameState = 'tiebreaker';
+                        room.tiePlayers = playersWithMaxVotes;
+                        room.tieSpeeches = [];
+                    } else {
+                        // 淘汰玩家
+                        const eliminatedPlayerId = playersWithMaxVotes[0];
+                        this.players[eliminatedPlayerId].isAlive = false;
+                        room.eliminatedPlayers.push(eliminatedPlayerId);
+                        
+                        // 检查游戏是否结束
+                        const result = checkGameEnd(room);
+                        if (result.gameOver) {
+                            room.gameState = 'results';
+                            room.winner = result.winner;
+                        } else {
+                            // 进入下一轮
+                            room.gameState = 'speaking';
+                            room.currentSpeakerIndex = 0;
+                            while (!this.players[room.players[room.currentSpeakerIndex]].isAlive) {
+                                room.currentSpeakerIndex = (room.currentSpeakerIndex + 1) % room.players.length;
+                            }
+                            room.speeches = [];
+                        }
+                    }
+                }
+                
+                callback({ 
+                    success: true, 
+                    votes: room.votes,
+                    gameState: room.gameState,
+                    voteCounts: voteCounts || {},
+                    eliminatedPlayer: playersWithMaxVotes ? playersWithMaxVotes[0] : null,
+                    tiePlayers: room.tiePlayers || [],
+                    winner: room.winner || null
+                });
+            },
+            
+            submitTiebreakerSpeech: function(playerId, speech, callback) {
+                const player = this.players[playerId];
+                if (!player) {
+                    callback({ success: false, message: "玩家不存在" });
+                    return;
+                }
+                
+                const roomId = player.roomId;
+                const room = this.rooms[roomId];
+                
+                // 记录发言
+                if (!room.tieSpeeches) room.tieSpeeches = [];
+                room.tieSpeeches.push({
+                    playerId: playerId,
+                    playerName: player.name,
+                    content: speech
+                });
+                
+                // 检查是否所有平票玩家都已发言
+                const spokenPlayers = room.tieSpeeches.filter(s => room.tiePlayers.includes(s.playerId)).length;
+                
+                if (spokenPlayers >= room.tiePlayers.length) {
+                    room.gameState = 'tiebreakerVoting';
+                    room.tieVotes = {};
+                }
+                
+                callback({ 
+                    success: true, 
+                    tieSpeeches: room.tieSpeeches || [],
+                    gameState: room.gameState
+                });
+            },
+            
+            submitTiebreakerVote: function(playerId, voteFor, callback) {
+                const player = this.players[playerId];
+                if (!player) {
+                    callback({ success: false, message: "玩家不存在" });
+                    return;
+                }
+                
+                const roomId = player.roomId;
+                const room = this.rooms[roomId];
+                
+                // 记录投票
+                if (!room.tieVotes) room.tieVotes = {};
+                room.tieVotes[playerId] = voteFor;
+                
+                // 检查是否所有玩家都已投票
+                const alivePlayers = room.players.filter(pId => this.players[pId].isAlive);
+                const votedPlayers = Object.keys(room.tieVotes).length;
+                
+                if (votedPlayers >= alivePlayers.length) {
+                    // 计算投票结果
+                    const voteCounts = {};
+                    room.tiePlayers.forEach(pId => {
+                        voteCounts[pId] = 0;
+                    });
+                    
+                    Object.values(room.tieVotes).forEach(votedPlayerId => {
+                        if (votedPlayerId && voteCounts[votedPlayerId] !== undefined) {
+                            voteCounts[votedPlayerId]++;
+                        }
+                    });
+                    
+                    // 找出最高票数
+                    const maxVotes = Math.max(...Object.values(voteCounts));
+                    const playersWithMaxVotes = Object.keys(voteCounts).filter(pId => voteCounts[pId] === maxVotes);
+                    
+                    // 淘汰玩家 (如果还是平票，随机淘汰一个)
+                    const eliminatedPlayerId = playersWithMaxVotes.length > 1 ? 
+                        playersWithMaxVotes[Math.floor(Math.random() * playersWithMaxVotes.length)] : 
+                        playersWithMaxVotes[0];
+                        
+                    this.players[eliminatedPlayerId].isAlive = false;
+                    room.eliminatedPlayers.push(eliminatedPlayerId);
+                    
+                    // 检查游戏是否结束
+                    const result = checkGameEnd(room);
+                    if (result.gameOver) {
+                        room.gameState = 'results';
+                        room.winner = result.winner;
+                    } else {
+                        // 进入下一轮
+                        room.gameState = 'speaking';
+                        room.currentSpeakerIndex = 0;
+                        while (!this.players[room.players[room.currentSpeakerIndex]].isAlive) {
+                            room.currentSpeakerIndex = (room.currentSpeakerIndex + 1) % room.players.length;
+                        }
+                        room.speeches = [];
+                    }
+                }
+                
+                callback({ 
+                    success: true, 
+                    tieVotes: room.tieVotes,
+                    gameState: room.gameState,
+                    voteCounts: voteCounts || {},
+                    eliminatedPlayer: eliminatedPlayerId,
+                    winner: room.winner || null
+                });
+            },
+            
+            getGameState: function(playerId, callback) {
+                const player = this.players[playerId];
+                if (!player) {
+                    callback({ success: false, message: "玩家不存在" });
+                    return;
+                }
+                
+                const roomId = player.roomId;
+                const room = this.rooms[roomId];
+                
+                if (!room) {
+                    callback({ success: false, message: "房间不存在" });
+                    return;
+                }
+                
+                const response = {
+                    success: true,
+                    gameState: room.gameState,
+                    currentSpeaker: room.players[room.currentSpeakerIndex],
+                    speeches: room.speeches || [],
+                    votes: room.votes || {},
+                    voteCounts: {},
+                    eliminatedPlayers: room.eliminatedPlayers || [],
+                    tiePlayers: room.tiePlayers || [],
+                    tieSpeeches: room.tieSpeeches || [],
+                    tieVotes: room.tieVotes || {},
+                    winner: room.winner || null,
+                    players: this.getRoomPlayers(roomId).map(p => ({
+                        id: p.id,
+                        name: p.name,
+                        isHost: p.isHost,
+                        isAlive: this.players[p.id].isAlive,
+                        role: this.players[p.id].role,
+                        word: this.players[p.id].word,
+                        hint: this.players[p.id].hint
+                    }))
+                };
+                
+                callback(response);
+            }
+        };
+
+        // 辅助函数：分配角色
+        function assignRoles(playerCount) {
+            const roles = [];
+            
+            // 计算角色数量
+            let undercoverCount = Math.floor(playerCount / 4);
+            let blankCount = Math.floor((playerCount - undercoverCount * 3) / 2);
+            let civilianCount = playerCount - undercoverCount - blankCount;
+            
+            // 确保比例接近2:1:1
+            if (undercoverCount === 0 && playerCount >= 4) undercoverCount = 1;
+            if (blankCount === 0 && playerCount >= 4) blankCount = 1;
+            civilianCount = playerCount - undercoverCount - blankCount;
+            
+            // 添加角色
+            for (let i = 0; i < civilianCount; i++) {
+                roles.push({ role: '平民', isUndercover: false });
+            }
+            for (let i = 0; i < undercoverCount; i++) {
+                roles.push({ role: '卧底', isUndercover: true });
+            }
+            for (let i = 0; i < blankCount; i++) {
+                roles.push({ role: '白板', isUndercover: false });
+            }
+            
+            // 打乱顺序
+            return shuffleArray(roles);
+        }
+
+        // 辅助函数：获取随机词汇对
+        function getRandomWordPair() {
+            const randomIndex = Math.floor(Math.random() * gameState.wordsPool.length);
+            const wordPair = gameState.wordsPool[randomIndex];
+            
+            // 确保卧底和平民的词汇不同但相似
+            const commonWord = wordPair.word;
+            let undercoverWord;
+            
+            // 寻找一个相似的词
+            const similarWords = gameState.wordsPool.filter(w => w.hint === wordPair.hint && w.word !== commonWord);
+            if (similarWords.length > 0) {
+                undercoverWord = similarWords[Math.floor(Math.random() * similarWords.length)].word;
+            } else {
+                // 如果没有相似的词，使用提示作为卧底的词
+                undercoverWord = wordPair.hint;
+            }
+            
+            return {
+                commonWord: commonWord,
+                undercoverWord: undercoverWord,
+                hint: wordPair.hint
+            };
+        }
+
+        // 辅助函数：检查游戏是否结束
+        function checkGameEnd(room) {
+            const alivePlayers = room.players.filter(pId => network.players[pId].isAlive);
+            const aliveRoles = alivePlayers.map(pId => network.players[pId].role);
+            
+            // 检查是否只剩2人
+            if (alivePlayers.length <= 2) {
+                // 检查是否有白板
+                const hasBlank = aliveRoles.includes('白板');
+                if (hasBlank) {
+                    return { gameOver: true, winner: '白板' };
+                }
+                
+                // 检查是否有卧底
+                const hasUndercover = aliveRoles.includes('卧底');
+                if (hasUndercover) {
+                    return { gameOver: true, winner: '卧底' };
+                }
+                
+                // 只有平民
+                return { gameOver: true, winner: '平民' };
+            }
+            
+            // 检查是否只剩一个阵营
+            const uniqueRoles = [...new Set(aliveRoles)];
+            if (uniqueRoles.length === 1) {
+                return { gameOver: true, winner: uniqueRoles[0] };
+            }
+            
+            return { gameOver: false };
+        }
+
+        // 辅助函数：打乱数组
+        function shuffleArray(array) {
+            const newArray = [...array];
+            for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+            }
+            return newArray;
+        }
+
+        // 事件监听器
+        elements.createRoomBtn.addEventListener('click', () => {
+            const playerName = elements.playerName.value.trim();
+            if (!playerName) {
+                alert('请输入你的名字');
+                return;
+            }
+            
+            network.createRoom(playerName, (response) => {
+                if (response.success) {
+                    gameState.playerName = playerName;
+                    gameState.playerId = response.playerId;
+                    gameState.roomId = response.roomId;
+                    gameState.isHost = response.isHost;
+                    
+                    elements.roomIdDisplay.textContent = response.roomId;
+                    elements.roomInfo.style.display = 'block';
+                    elements.joinRoomSection.style.display = 'none';
+                    
+                    updatePlayerList([{ id: response.playerId, name: playerName, isHost: true }]);
+                    
+                    // 如果是房主，定期检查玩家列表
+                    if (gameState.isHost) {
+                        setInterval(() => {
+                            const players = network.getRoomPlayers(gameState.roomId);
+                            updatePlayerList(players);
+                            elements.startGameBtn.disabled = players.length < 4;
+                        }, 2000);
+                    }
+                } else {
+                    alert('创建房间失败: ' + response.message);
+                }
+            });
+        });
+
+        elements.joinRoomBtn.addEventListener('click', () => {
+            elements.joinRoomSection.style.display = 'block';
+        });
+
+        elements.confirmJoinBtn.addEventListener('click', () => {
+            const playerName = elements.playerName.value.trim();
+            const roomId = elements.roomIdInput.value.trim();
+            
+            if (!playerName) {
+                alert('请输入你的名字');
+                return;
+            }
+            
+            if (!roomId) {
+                alert('请输入房间号');
+                return;
+            }
+            
+            network.joinRoom(playerName, roomId, (response) => {
+                if (response.success) {
+                    gameState.playerName = playerName;
+                    gameState.playerId = response.playerId;
+                    gameState.roomId = response.roomId;
+                    gameState.isHost = response.isHost;
+                    
+                    elements.roomIdDisplay.textContent = response.roomId;
+                    elements.roomInfo.style.display = 'block';
+                    elements.joinRoomSection.style.display = 'none';
+                    
+                    updatePlayerList(response.players);
+                    
+                    // 定期检查游戏状态
+                    setInterval(() => {
+                        network.getGameState(gameState.playerId, (response) => {
+                            if (response.success) {
+                                updatePlayerList(response.players);
+                                
+                                if (response.gameState !== gameState.gamePhase) {
+                                    gameState.gamePhase = response.gameState;
+                                    updateGameUI();
+                                }
+                            }
+                        });
+                    }, 2000);
+                } else {
+                    alert('加入房间失败: ' + response.message);
+                }
+            });
+        });
+
+        elements.startGameBtn.addEventListener('click', () => {
+            if (gameState.isHost) {
+                network.startGame(gameState.roomId, (response) => {
+                    if (response.success) {
+                        gameState.gamePhase = 'roleAssignment';
+                        updateGameUI();
+                        
+                        // 获取玩家自己的信息
+                        network.getPlayerInfo(gameState.playerId, (playerInfo) => {
+                            gameState.role = playerInfo.role;
+                            gameState.word = playerInfo.word;
+                            gameState.hint = playerInfo.hint;
+                            
+                            updateRoleInfo();
+                        });
+                    } else {
+                        alert('开始游戏失败: ' + response.message);
+                    }
+                });
+            }
+        });
+
+        elements.submitSpeechBtn.addEventListener('click', () => {
+            const speech = elements.speechInput.value.trim();
+            if (!speech) {
+                alert('请输入发言内容');
+                return;
+            }
+            
+            network.submitSpeech(gameState.playerId, speech, (response) => {
+                if (response.success) {
+                    addLogEntry(`${gameState.playerName}: ${speech}`);
+                    elements.speechInput.value = '';
+                    
+                    if (response.gameState === 'voting') {
+                        gameState.gamePhase = 'voting';
+                        updateGameUI();
+                        startTimer(gameState.voteTime);
+                    } else {
+                        elements.waitingArea.style.display = 'block';
+                        elements.speechArea.style.display = 'none';
+                    }
+                } else {
+                    alert('提交发言失败: ' + response.message);
+                }
+            });
+        });
+
+        elements.abstainVoteBtn.addEventListener('click', () => {
+            network.submitVote(gameState.playerId, null, (response) => {
+                handleVoteResponse(response);
+            });
+        });
+
+        elements.newGameBtn.addEventListener('click', () => {
+            if (gameState.isHost) {
+                network.startGame(gameState.roomId, (response) => {
+                    if (response.success) {
+                        gameState.gamePhase = 'roleAssignment';
+                        updateGameUI();
+                        
+                        // 获取玩家自己的信息
+                        network.getPlayerInfo(gameState.playerId, (playerInfo) => {
+                            gameState.role = playerInfo.role;
+                            gameState.word = playerInfo.word;
+                            gameState.hint = playerInfo.hint;
+                            
+                            updateRoleInfo();
+                        });
+                    } else {
+                        alert('开始新游戏失败: ' + response.message);
+                    }
+                });
+            } else {
+                elements.results.style.display = 'none';
+                elements.waitingArea.style.display = 'block';
+            }
+        });
+
+        // UI更新函数
+        function updatePlayerList(players) {
+            elements.playerList.innerHTML = '';
+            gameState.players = players;
+            
+            players.forEach(player => {
+                const playerElement = document.createElement('div');
+                playerElement.className = 'player';
+                playerElement.textContent = player.name + (player.isHost ? ' (房主)' : '');
+                elements.playerList.appendChild(playerElement);
+            });
+            
+            if (gameState.isHost) {
+                elements.startGameBtn.disabled = players.length < 4;
+            }
+        }
+
+        function updateGameUI() {
+            elements.lobby.style.display = 'none';
+            elements.gameArea.style.display = 'block';
+            
+            // 隐藏所有游戏区域
+            elements.roleInfo.style.display = 'none';
+            elements.speechArea.style.display = 'none';
+            elements.voteArea.style.display = 'none';
+            elements.results.style.display = 'none';
+            elements.waitingArea.style.display = 'none';
+            
+            switch (gameState.gamePhase) {
+                case 'roleAssignment':
+                    elements.gamePhase.textContent = '角色分配';
+                    elements.roleInfo.style.display = 'block';
+                    startTimer(30); // 30秒查看角色时间
+                    break;
+                    
+                case 'speaking':
+                    elements.gamePhase.textContent = '发言环节';
+                    setupSpeakingPhase();
+                    break;
+                    
+                case 'voting':
+                    elements.gamePhase.textContent = '投票环节';
+                    setupVotingPhase();
+                    break;
+                    
+                case 'tiebreaker':
+                    elements.gamePhase.textContent = '平票发言';
+                    setupTiebreakerPhase();
+                    break;
+                    
+                case 'tiebreakerVoting':
+                    elements.gamePhase.textContent = '平票投票';
+                    setupTiebreakerVotingPhase();
+                    break;
+                    
+                case 'results':
+                    elements.gamePhase.textContent = '游戏结果';
+                    showResults();
+                    break;
+                    
+                default:
+                    elements.waitingArea.style.display = 'block';
+            }
+        }
+
+        function updateRoleInfo() {
+            elements.roleText.textContent = `你的身份: ${gameState.role}`;
+            
+            if (gameState.role === '白板') {
+                elements.wordText.textContent = '你没有词汇，只有提示';
+                elements.hintText.textContent = `提示: ${gameState.hint}`;
+            } else {
+                elements.wordText.textContent = `你的词汇: ${gameState.word}`;
+                elements.hintText.textContent = '';
+            }
+        }
+
+        function setupSpeakingPhase() {
+            network.getGameState(gameState.playerId, (response) => {
+                if (response.success) {
+                    const currentSpeakerId = response.currentSpeaker;
+                    const currentSpeaker = response.players.find(p => p.id === currentSpeakerId);
+                    
+                    if (currentSpeakerId === gameState.playerId) {
+                        elements.currentSpeaker.textContent = gameState.playerName;
+                        elements.speechArea.style.display = 'block';
+                        elements.waitingArea.style.display = 'none';
+                        startTimer(gameState.speechTime);
+                    } else {
+                        elements.currentSpeaker.textContent = currentSpeaker.name;
+                        elements.waitingArea.style.display = 'block';
+                        elements.speechArea.style.display = 'none';
+                    }
+                    
+                    // 显示之前的发言
+                    elements.gameLog.innerHTML = '';
+                    response.speeches.forEach(speech => {
+                        addLogEntry(`${speech.playerName}: ${speech.content}`);
+                    });
+                }
+            });
+        }
+
+        function setupVotingPhase() {
+            network.getGameState(gameState.playerId, (response) => {
+                if (response.success) {
+                    elements.voteOptions.innerHTML = '';
+                    
+                    // 只显示存活的玩家
+                    const alivePlayers = response.players.filter(p => p.isAlive && p.id !== gameState.playerId);
+                    
+                    alivePlayers.forEach(player => {
+                        const voteBtn = document.createElement('button');
+                        voteBtn.className = 'btn vote-btn';
+                        voteBtn.textContent = player.name;
+                        voteBtn.addEventListener('click', () => {
+                            network.submitVote(gameState.playerId, player.id, (voteResponse) => {
+                                handleVoteResponse(voteResponse);
+                            });
+                        });
+                        elements.voteOptions.appendChild(voteBtn);
+                    });
+                    
+                    elements.voteArea.style.display = 'block';
+                    startTimer(gameState.voteTime);
+                    
+                    // 显示之前的发言
+                    elements.gameLog.innerHTML = '';
+                    response.speeches.forEach(speech => {
+                        addLogEntry(`${speech.playerName}: ${speech.content}`);
+                    });
+                }
+            });
+        }
+
+        function setupTiebreakerPhase() {
+            network.getGameState(gameState.playerId, (response) => {
+                if (response.success) {
+                    if (response.tiePlayers.includes(gameState.playerId)) {
+                        elements.currentSpeaker.textContent = gameState.playerName;
+                        elements.speechArea.style.display = 'block';
+                        elements.waitingArea.style.display = 'none';
+                        elements.submitSpeechBtn.textContent = '提交补充发言';
+                        startTimer(gameState.speechTime);
+                    } else {
+                        elements.currentSpeaker.textContent = '平票玩家发言中...';
+                        elements.waitingArea.style.display = 'block';
+                        elements.speechArea.style.display = 'none';
+                    }
+                    
+                    // 显示之前的发言和投票结果
+                    elements.gameLog.innerHTML = '';
+                    response.speeches.forEach(speech => {
+                        addLogEntry(`${speech.playerName}: ${speech.content}`);
+                    });
+                    
+                    addLogEntry('--- 投票结果 ---');
+                    Object.entries(response.voteCounts).forEach(([playerId, votes]) => {
+                        const player = response.players.find(p => p.id === playerId);
+                        if (player) {
+                            addLogEntry(`${player.name}: ${votes}票`);
+                        }
+                    });
+                    addLogEntry('--- 平票 ---');
+                }
+            });
+        }
+
+        function setupTiebreakerVotingPhase() {
+            network.getGameState(gameState.playerId, (response) => {
+                if (response.success) {
+                    elements.voteOptions.innerHTML = '';
+                    
+                    // 只显示平票的玩家
+                    response.tiePlayers.forEach(playerId => {
+                        const player = response.players.find(p => p.id === playerId);
+                        if (player) {
+                            const voteBtn = document.createElement('button');
+                            voteBtn.className = 'btn vote-btn';
+                            voteBtn.textContent = player.name;
+                            voteBtn.addEventListener('click', () => {
+                                network.submitTiebreakerVote(gameState.playerId, player.id, (voteResponse) => {
+                                    handleVoteResponse(voteResponse);
+                                });
+                            });
+                            elements.voteOptions.appendChild(voteBtn);
+                        }
+                    });
+                    
+                    elements.voteArea.style.display = 'block';
+                    startTimer(gameState.voteTime);
+                    
+                    // 显示平票玩家的发言
+                    elements.gameLog.innerHTML = '';
+                    response.tieSpeeches.forEach(speech => {
+                        addLogEntry(`${speech.playerName}: ${speech.content}`);
+                    });
+                }
+            });
+        }
+
+        function handleVoteResponse(response) {
+            if (response.success) {
+                if (response.gameState === 'speaking') {
+                    gameState.gamePhase = 'speaking';
+                    updateGameUI();
+                } else if (response.gameState === 'results') {
+                    gameState.gamePhase = 'results';
+                    updateGameUI();
+                } else if (response.gameState === 'tiebreaker') {
+                    gameState.gamePhase = 'tiebreaker';
+                    updateGameUI();
+                } else if (response.gameState === 'tiebreakerVoting') {
+                    gameState.gamePhase = 'tiebreakerVoting';
+                    updateGameUI();
+                } else {
+                    elements.waitingArea.style.display = 'block';
+                    elements.voteArea.style.display = 'none';
+                }
+                
+                // 显示投票结果
+                if (response.eliminatedPlayer) {
+                    const eliminatedPlayer = gameState.players.find(p => p.id === response.eliminatedPlayer);
+                    if (eliminatedPlayer) {
+                        addLogEntry(`${eliminatedPlayer.name} 被投票出局，身份是 ${network.players[response.eliminatedPlayer].role}`);
+                    }
+                }
+            } else {
+                alert('投票失败: ' + response.message);
+            }
+        }
+
+        function showResults() {
+            network.getGameState(gameState.playerId, (response) => {
+                if (response.success) {
+                    elements.resultContent.innerHTML = '';
+                    
+                    const winner = response.winner;
+                    const resultTitle = document.createElement('h3');
+                    
+                    if (winner === '平民') {
+                        resultTitle.textContent = '平民胜利！';
+                        resultTitle.style.color = '#4CAF50';
+                    } else if (winner === '卧底') {
+                        resultTitle.textContent = '卧底胜利！';
+                        resultTitle.style.color = '#F44336';
+                    } else if (winner === '白板') {
+                        resultTitle.textContent = '白板胜利！';
+                        resultTitle.style.color = '#9C27B0';
+                    }
+                    
+                    elements.resultContent.appendChild(resultTitle);
+                    
+                    const resultList = document.createElement('ul');
+                    response.players.forEach(player => {
+                        const playerItem = document.createElement('li');
+                        playerItem.textContent = `${player.name}: ${player.role} (${player.word || player.hint})`;
+                        resultList.appendChild(playerItem);
+                    });
+                    
+                    elements.resultContent.appendChild(resultList);
+                    elements.results.style.display = 'block';
+                    
+                    // 显示游戏日志
+                    elements.gameLog.innerHTML = '';
+                    response.speeches.forEach(speech => {
+                        addLogEntry(`${speech.playerName}: ${speech.content}`);
+                    });
+                    
+                    if (response.tieSpeeches) {
+                        response.tieSpeeches.forEach(speech => {
+                            addLogEntry(`[补充] ${speech.playerName}: ${speech.content}`);
+                        });
+                    }
+                }
+            });
+        }
+
+        function addLogEntry(text) {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.textContent = text;
+            elements.gameLog.appendChild(entry);
+            elements.gameLog.scrollTop = elements.gameLog.scrollHeight;
+        }
+
+        function startTimer(seconds) {
+            clearInterval(gameState.timerInterval);
+            gameState.timeLeft = seconds;
+            updateTimerDisplay();
+            
+            gameState.timerInterval = setInterval(() => {
+                gameState.timeLeft--;
+                updateTimerDisplay();
+                
+                if (gameState.timeLeft <= 0) {
+                    clearInterval(gameState.timerInterval);
+                    
+                    // 时间到自动提交
+                    if (gameState.gamePhase === 'speaking' && elements.speechArea.style.display === 'block') {
+                        if (elements.speechInput.value.trim() === '') {
+                            elements.speechInput.value = '我弃权';
+                        }
+                        elements.submitSpeechBtn.click();
+                    } else if (gameState.gamePhase === 'voting' && elements.voteArea.style.display === 'block') {
+                        elements.abstainVoteBtn.click();
+                    } else if (gameState.gamePhase === 'tiebreaker' && elements.speechArea.style.display === 'block') {
+                        if (elements.speechInput.value.trim() === '') {
+                            elements.speechInput.value = '我弃权';
+                        }
+                        elements.submitSpeechBtn.click();
+                    } else if (gameState.gamePhase === 'tiebreakerVoting' && elements.voteArea.style.display === 'block') {
+                        elements.abstainVoteBtn.click();
+                    }
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(gameState.timeLeft / 60);
+            const seconds = gameState.timeLeft % 60;
+            elements.timer.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // 初始化
+        updatePlayerList([]);
+    </script>
+</body>
+</html>
