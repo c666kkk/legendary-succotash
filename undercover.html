@@ -276,79 +276,49 @@
             newGameBtn: document.getElementById('newGameBtn'),
             waitingArea: document.getElementById('waitingArea')
         };
+    
+            // 模拟网络通信 (在实际应用中应替换为真实的WebSocket或HTTP请求)
+          const network = {
+     // 创建房间逻辑（替换原有代码）
+elements.createRoomBtn.addEventListener('click', () => {
+  const playerName = elements.playerName.value.trim();
+  if (!playerName) {
+    alert('请输入你的名字');
+    return;
+  }
+  socket.emit('createRoom', playerName, (response) => {
+    if (response.success) {
+      gameState.playerName = playerName;
+      gameState.roomId = response.roomId;
+      gameState.isHost = true;
+      elements.roomIdDisplay.textContent = response.roomId;
+      elements.roomInfo.style.display = 'block';
+      elements.joinRoomSection.style.display = 'none';
+    }
+  });
+});
 
-        // 模拟网络通信 (在实际应用中应替换为真实的WebSocket或HTTP请求)
-       const network = {
-    rooms: {}, // 存储所有房间
-    players: {}, // 存储所有玩家
-    
-    // 创建房间（修改后）
-    createRoom: function(playerName, callback) {
-        const roomId = Math.floor(1000 + Math.random() * 9000).toString();
-        const playerId = Math.random().toString(36).substr(2, 9);
-        
-        this.rooms[roomId] = {
-            players: [playerId],
-            host: playerId,
-            gameState: 'lobby',
-            words: null
-        };
-        
-        this.players[playerId] = {
-            name: playerName,
-            roomId: roomId,
-            isHost: true,
-            isAlive: true
-        };
-        
-        callback({
-            success: true,
-            roomId: roomId,
-            playerId: playerId
-        });
-    },
-    
-    // 加入房间（修改后）
-    joinRoom: function(playerName, roomId, callback) {
-        if (!this.rooms[roomId]) {
-            callback({ success: false, message: "房间不存在" });
-            return;
-        }
-        
-        const playerId = Math.random().toString(36).substr(2, 9);
-        this.rooms[roomId].players.push(playerId);
-        
-        this.players[playerId] = {
-            name: playerName,
-            roomId: roomId,
-            isHost: false,
-            isAlive: true
-        };
-        
-        callback({
-            success: true,
-            roomId: roomId,
-            playerId: playerId,
-            players: this.getRoomPlayers(roomId)
-        });
-    },
-            getRoomPlayers: function(roomId) {
-                if (!this.rooms[roomId]) return [];
-                
-                return this.rooms[roomId].players.map(playerId => {
-                    return {
-                        id: playerId,
-                        name: this.players[playerId].name,
-                        isHost: this.players[playerId].isHost
-                    };
-                });
-            },
-            
-            startGame: function(roomId, callback) {
-                if (!this.rooms[roomId]) {
-                    callback({ success: false, message: "房间不存在" });
-                    return;
-                }
+// 加入房间逻辑（替换原有代码）
+elements.confirmJoinBtn.addEventListener('click', () => {
+  const playerName = elements.playerName.value.trim();
+  const roomId = elements.roomIdInput.value.trim();
+  if (!playerName || !roomId) {
+    alert('请输入名字和房间号');
+    return;
+  }
+  socket.emit('joinRoom', { playerName, roomId }, (response) => {
+    if (response.success) {
+      gameState.playerName = playerName;
+      gameState.roomId = roomId;
+      elements.roomIdDisplay.textContent = roomId;
+      elements.roomInfo.style.display = 'block';
+      elements.joinRoomSection.style.display = 'none';
+    } else {
+      alert(response.message);
+    }
+  });
+});                                                                                                                                                                                                             
+        }                                                                                                                                                                                                               
                 
                 // 分配角色和词汇
                 const players = this.getRoomPlayers(roomId);
