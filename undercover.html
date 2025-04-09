@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>谁是卧底</title>
     <style>
+       const socket = io('http://localhost:3000');
         body {
             font-family: 'Microsoft YaHei', sans-serif;
             background-color: #f5f5f5;
@@ -317,9 +318,7 @@ elements.confirmJoinBtn.addEventListener('click', () => {
       alert(response.message);
     }
   });
-});                                                                                                                                                                                                             
-        }                                                                                                                                                                                                               
-                
+});                                                                                                                                                                                                                  
                 // 分配角色和词汇
                 const players = this.getRoomPlayers(roomId);
                 const roles = assignRoles(players.length);
@@ -1216,7 +1215,7 @@ elements.confirmJoinBtn.addEventListener('click', () => {
             console.warn('网络模块未正确初始化，正在重新加载...');
             setTimeout(() => location.reload(), 1000);
         }
-        const socket = io('https://who-is-spy.onrender.com');
+        
     </script>
 </body>
 </html>
